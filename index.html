@@ -292,8 +292,10 @@
       font-size: 13px;
       font-weight: 600;
       color: var(--text-light);
-      flex: 0 0 auto;
+      flex: 0 1 auto;
       min-width: 92px;
+      max-width: 48%;
+      line-height: 1.35;
     }
     .input-table tbody td input,
     .input-table tbody td select {
@@ -569,11 +571,11 @@
           <input type="number" id="kb3-rate" placeholder="Rate &#8377;">
           <input type="text" id="kb3-desc" placeholder="Description">
         </div>
-        <div class="rate-item"><label>5&Prime; PVC Chip</label>
+        <div class="rate-item"><label>5&Prime; PVC</label>
           <input type="number" id="pvc5-rate" placeholder="Rate &#8377;">
           <input type="text" id="pvc5-desc" placeholder="Description">
         </div>
-        <div class="rate-item"><label>3&Prime; PVC Chip</label>
+        <div class="rate-item"><label>3&Prime; PVC</label>
           <input type="number" id="pvc3-rate" placeholder="Rate &#8377;">
           <input type="text" id="pvc3-desc" placeholder="Description">
         </div>
@@ -586,7 +588,7 @@
     <div class="card">
       <div class="card-title">Size-wise Rates</div>
       <table class="input-table" id="f3-table">
-        <thead><tr><th>Size</th><th>Single Door &#8377;</th><th>Double Door &#8377;</th><th style="width:40px"></th></tr></thead>
+        <thead><tr><th>Size</th><th>Rate for Single Door</th><th>Rate for Double Door</th><th style="width:40px"></th></tr></thead>
         <tbody id="f3-body"></tbody>
       </table>
       <button class="add-row-btn" onclick="addRow('f3-body', f3Row)">+ Add Row</button>
@@ -688,8 +690,8 @@ function f2SteelRow() {
 }
 function f3Row() {
   return `<td data-label="Size"><input type="text" placeholder="e.g. 7\u00d73"></td>
-          <td data-label="Single \u20b9"><input type="number" placeholder="0"></td>
-          <td data-label="Double \u20b9"><input type="number" placeholder="0"></td>
+          <td data-label="Rate for Single Door"><input type="number" placeholder="0"></td>
+          <td data-label="Rate for Double Door"><input type="number" placeholder="0"></td>
           <td class="del-cell"><button class="del-btn" onclick="delRow(this)">\u2715</button></td>`;
 }
 function addRow(tbodyId, rowFn) {
@@ -768,8 +770,8 @@ function buildPDFDoc() {
     const items = [
       {label:'5\u2033 Kabja', rate:document.getElementById('kb5-rate').value, desc:document.getElementById('kb5-desc').value},
       {label:'3\u2033 Kabja', rate:document.getElementById('kb3-rate').value, desc:document.getElementById('kb3-desc').value},
-      {label:'5\u2033 PVC Chip', rate:document.getElementById('pvc5-rate').value, desc:document.getElementById('pvc5-desc').value},
-      {label:'3\u2033 PVC Chip', rate:document.getElementById('pvc3-rate').value, desc:document.getElementById('pvc3-desc').value},
+      {label:'5\u2033 PVC', rate:document.getElementById('pvc5-rate').value, desc:document.getElementById('pvc5-desc').value},
+      {label:'3\u2033 PVC', rate:document.getElementById('pvc3-rate').value, desc:document.getElementById('pvc3-desc').value},
     ];
     const kabjeHTML = items.map(k => `<div class="pdf-item-card"><div class="pdf-item-card-title">${k.label}</div><div class="pdf-item-card-rate">\u20b9${parseFloat(k.rate||0).toLocaleString('en-IN')}</div>${k.desc?`<div class="pdf-item-card-desc">${k.desc}</div>`:''}</div>`).join('');
     doc.innerHTML = `${pdfHeaderHTML()}
@@ -778,7 +780,7 @@ function buildPDFDoc() {
     <table class="pdf-table"><thead><tr><th>Frame Brand</th><th>Thickness</th><th>Rate</th></tr></thead><tbody>${frameHTML}</tbody></table>
     <div class="pdf-section-title">Steel Grade Rates</div>
     <table class="pdf-table"><thead><tr><th>Steel Grade</th><th>Steel Size</th><th>Rate</th></tr></thead><tbody>${steelHTML}</tbody></table>
-    <div class="pdf-section-title">Kabje &amp; PVC Chip Rates</div>
+    <div class="pdf-section-title">Kabje &amp; PVC Rates</div>
     <div class="pdf-items-grid">${kabjeHTML}</div>
     <div class="pdf-footer">Shree Ji Raj Industries | ${COMPANY.phone} | ${COMPANY.web}</div>`;
   }
@@ -787,7 +789,7 @@ function buildPDFDoc() {
     let rowsHTML = Array.from(rows).map(r => { const i = r.querySelectorAll('input'); return `<tr><td>${i[0].value||'\u2014'}</td><td>\u20b9${parseFloat(i[1].value||0).toLocaleString('en-IN')}</td><td>\u20b9${parseFloat(i[2].value||0).toLocaleString('en-IN')}</td></tr>`; }).join('');
     doc.innerHTML = `${pdfHeaderHTML()}
     <div class="pdf-doc-title">Size-wise Rate List</div>
-    <table class="pdf-table"><thead><tr><th>Size</th><th>Single Door Rate</th><th>Double Door Rate</th></tr></thead><tbody>${rowsHTML}</tbody></table>
+    <table class="pdf-table"><thead><tr><th>Size</th><th>Rate for Single Door</th><th>Rate for Double Door</th></tr></thead><tbody>${rowsHTML}</tbody></table>
     <div class="pdf-footer">Shree Ji Raj Industries | ${COMPANY.phone} | ${COMPANY.web}</div>`;
   }
 }
