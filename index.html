@@ -144,10 +144,11 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
 .pdf-header {
   display:flex; align-items:center; gap:24px;
   padding:28px 50px 24px;
-  background:#FFFFFF;
+  background:#FFFFFF !important;
+  background-color:#FFFFFF !important;
   border-bottom:2px solid #111111;
 }
-.pdf-logo { width:85px; height:85px; object-fit:contain; }
+.pdf-logo { width:85px; height:85px; object-fit:contain; display:block; background:#ffffff; }
 .pdf-company-info { flex:1; }
 .pdf-company-name {
   font-size:24px; font-weight:900; color:#111111;
@@ -164,7 +165,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',
 .pdf-contact-item .icon { color:#C9A84C; font-weight:700; }
 
 /* BODY */
-.pdf-body { padding:28px 50px 44px; background:#FFFFFF; }
+.pdf-body { padding:28px 50px 44px; background:#FFFFFF !important; background-color:#FFFFFF !important; }
 
 /* TITLE ROW */
 .pdf-title-row {
@@ -655,82 +656,110 @@ function buildPDFDoc() {
   }
 }
 
-// ---- EXPORT (PHONE-SAFE: no preview, direct download) ----
+// ---- EXPORT PDF ----
 function exportPDF() {
   buildPDFDoc();
+
   const doc = document.getElementById('pdf-doc');
-  doc.style.visibility = 'visible';
-  doc.style.left = '0';
-  doc.style.top = '0';
+
+  // Force pure white, no inherited colors
+  doc.style.cssText = [
+    'position:fixed','left:0','top:0','visibility:visible',
+    'background:#ffffff','background-color:#ffffff',
+    'color:#111111','z-index:9999'
+  ].join(';');
+
+  // Force all child elements white background too
+  const allEls = doc.querySelectorAll('*');
+  const savedBg = [];
+  allEls.forEach((el, i) => {
+    savedBg[i] = el.style.background;
+    const cs = window.getComputedStyle(el);
+    if(cs.backgroundColor === 'rgba(0, 0, 0, 0)' || cs.backgroundColor === 'transparent') {
+      el.style.background = '#ffffff';
+    }
+  });
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const titles = ['SJRI_Order_Sheet','SJRI_Rate_Card','SJRI_Size_Rates'];
+  const filename = titles[currentTab-1]+'_'+new Date().toISOString().slice(0,10)+'.pdf';
 
-  // Load jsPDF and html2canvas from CDN dynamically if not loaded
-  function doRender() {
-    if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
-      alert('Libraries loading... please try again in a moment.');
-      doc.style.visibility='hidden'; doc.style.left='-9999px'; return;
-    }
-    const titles = ['SJRI_Order_Sheet','SJRI_Rate_Card','SJRI_Size_Rates'];
-    const filename = titles[currentTab-1]+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+  // Small delay so DOM renders properly
+  setTimeout(() => {
     html2canvas(doc, {
-      scale: isMobile ? 1.5 : 2,
+      scale: isMobile ? 2 : 2.5,
       useCORS: true,
       allowTaint: true,
       logging: false,
-      imageTimeout: 0,
-      backgroundColor: '#ffffff'
-    }).then(canvas => {
-      try {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const imgW = pageW;
-        const imgH = (canvas.height * imgW) / canvas.width * (25.4/96);
-        const imgData = canvas.toDataURL('image/jpeg', isMobile ? 0.85 : 0.95);
-
-        if(imgH <= pageH) {
-          pdf.addImage(imgData,'JPEG',0,0,imgW,imgH);
-        } else {
-          // Multi-page support
-          let y = 0;
-          const ratio = canvas.width / imgW;
-          while(y < canvas.height) {
-            const sliceH = Math.min(pageH * ratio * (96/25.4), canvas.height - y);
-            const sliceCanvas = document.createElement('canvas');
-            sliceCanvas.width = canvas.width;
-            sliceCanvas.height = sliceH;
-            sliceCanvas.getContext('2d').drawImage(canvas, 0, -y);
-            const sliceData = sliceCanvas.toDataURL('image/jpeg', isMobile ? 0.85 : 0.95);
-            const sliceImgH = (sliceH / ratio) * (25.4/96);
-            pdf.addImage(sliceData,'JPEG',0,0,imgW,sliceImgH);
-            y += sliceH;
-            if(y < canvas.height) pdf.addPage();
-          }
+      imageTimeout: 15000,
+      backgroundColor: '#ffffff',
+      removeContainer: true,
+      foreignObjectRendering: false,
+      onclone: (clonedDoc) => {
+        const clonedPdf = clonedDoc.getElementById('pdf-doc');
+        if(clonedPdf) {
+          clonedPdf.style.background = '#ffffff';
+          clonedPdf.style.backgroundColor = '#ffffff';
+          // Remove any box-shadow that causes blue tint
+          clonedDoc.querySelectorAll('*').forEach(el => {
+            el.style.boxShadow = 'none';
+            el.style.webkitPrintColorAdjust = 'exact';
+          });
         }
-
-        if(isMobile) {
-          // Mobile: open as blob URL so user can share/save
-          const blob = pdf.output('blob');
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = filename; a.target = '_blank';
-          document.body.appendChild(a); a.click();
-          setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
-        } else {
-          pdf.save(filename);
-        }
-      } catch(e) {
-        alert('PDF banane mein error: '+e.message);
       }
-      doc.style.visibility='hidden'; doc.style.left='-9999px';
-    }).catch(e=>{
-      alert('Render error: '+e.message);
-      doc.style.visibility='hidden'; doc.style.left='-9999px';
+    }).then(canvas => {
+      // Restore
+      doc.style.cssText = 'position:fixed;left:-9999px;top:0;visibility:hidden;';
+      allEls.forEach((el,i) => { el.style.background = savedBg[i]; });
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+      const pageW = pdf.internal.pageSize.getWidth();   // 210mm
+      const pageH = pdf.internal.pageSize.getHeight();  // 297mm
+
+      // canvas px → mm conversion
+      const pxPerMm = canvas.width / pageW;
+      const contentHeightMm = canvas.height / pxPerMm;
+
+      if(contentHeightMm <= pageH) {
+        // Single page
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.97), 'JPEG', 0, 0, pageW, contentHeightMm);
+      } else {
+        // Multi page
+        let yPx = 0;
+        const pageHeightPx = pageH * pxPerMm;
+        while(yPx < canvas.height) {
+          const slicePx = Math.min(pageHeightPx, canvas.height - yPx);
+          const slice = document.createElement('canvas');
+          slice.width = canvas.width;
+          slice.height = slicePx;
+          const ctx = slice.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0,0,slice.width,slice.height);
+          ctx.drawImage(canvas, 0, -yPx);
+          const sliceHeightMm = slicePx / pxPerMm;
+          pdf.addImage(slice.toDataURL('image/jpeg',0.97),'JPEG',0,0,pageW,sliceHeightMm);
+          yPx += slicePx;
+          if(yPx < canvas.height) pdf.addPage();
+        }
+      }
+
+      // Save
+      if(isMobile) {
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.target = '_blank';
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+      } else {
+        pdf.save(filename);
+      }
+    }).catch(e => {
+      doc.style.cssText = 'position:fixed;left:-9999px;top:0;visibility:hidden;';
+      alert('PDF error: ' + e.message);
     });
-  }
-  doRender();
+  }, 200);
 }
 
 function closePreview() { document.getElementById('pdf-preview').classList.remove('show'); }
